@@ -1,5 +1,6 @@
 import random
 from randomAgent import RandomAgent
+from heroes import *
 from enum import Enum
 
 class Phase(Enum):
@@ -74,7 +75,8 @@ class Player:
         return self.agent.action(obs, actions)
 
 class Game:
-    def __init__(self, players=[]):
+    def __init__(self, hero, players=[]):
+        self.hero = hero
         self.phase = Phase.BIDDING
         self.deck = Deck(standardMonsters)
         self.deck.shuffle()
@@ -124,15 +126,26 @@ class Game:
             else:
                 print("Player %d is still in!" % self.currTurn)
                 monster = self.deck.draw()
-                # temp...
-                self.dungeon.append(monster)
+                a = currPlayer.action(
+                    self.getObs(), 
+                    self.hero.itemActions + [-1],
+                )
+                if a == -1:
+                    print("Adding a monster to the dungeon")
+                    self.dungeon.append(monster)
+                else:
+                    print("Removing an item")
+                    self.hero.remove(a)
             
         self.currTurn = (self.currTurn + 1) % self.playerNum
 
 if __name__=="__main__":
-    g = Game([Player(RandomAgent()) for i in range(3)])
+    players = [Player(RandomAgent()) for i in range(3)]
+    g = Game(Warrior(), players)
+    g.addPlayer(Player(RandomAgent()))
     print(g)
     print(g.deck.cards)
     while g.phase == Phase.BIDDING:
         g.step()
+    print(g.hero.items)
     print(g.dungeon)
