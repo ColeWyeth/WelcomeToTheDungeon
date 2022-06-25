@@ -1,4 +1,5 @@
 import random
+from randomAgent import RandomAgent
 from enum import Enum
 
 class Phase(Enum):
@@ -52,14 +53,86 @@ class Deck:
     def draw(self):
         return self.cards.pop()
 
-class Game:
+class PlayerState:
     def __init__(self):
+        self.successes = 0
+        self.failures = 0
+        self.active = True
+
+    def isEliminated(self):
+        return self.failures == 2
+    
+    def isVictorious(self):
+        return self.successes == 2
+
+class Player:
+    def __init__(self, agent):
+        self.agent = agent
+        self.state = PlayerState()
+
+    def action(self, obs, actions=None):
+        return self.agent.action(obs, actions)
+
+class Game:
+    def __init__(self, players=[]):
         self.phase = Phase.BIDDING
         self.deck = Deck(standardMonsters)
         self.deck.shuffle()
-        while not self.deck.isEmpty():
-            m = self.deck.draw()
-            print(m)
+        self.dungeon = []
+        self.playerNum = len(players)
+        self.players = players
+        self.currTurn = 0
+    
+    def __repr__(self):
+        return "%d Player Game of Welcome to the Dungeon" % self.playerNum
+
+    def addPlayer(self, player):
+        self.playerNum += 1
+        self.players.append(player)
+
+    def getObs(self):
+        """The game as observed by the current player."""
+        return None
+
+    def oneActiveRemains(self):
+        counter = 0
+        for p in self.players:
+            if p.state.active:
+                counter += 1
+        return counter == 1
+
+    def step(self):
+        if self.phase == Phase.BIDDING:
+            if self.oneActiveRemains():
+                self.phase = Phase.DUNGEON
+            else:
+                self.biddingStep()
+        else:
+            pass
+
+    def biddingStep(self):
+        currPlayer = self.players[self.currTurn]
+        if currPlayer.state.active:
+            if self.deck.isEmpty():
+                # If the deck is empty the current player must pass
+                passes = True
+            else:
+                passes = currPlayer.action(self.getObs(),[True,False])
+            if passes:
+                print("Player %d passed!" % self.currTurn)
+                currPlayer.state.active = False
+            else:
+                print("Player %d is still in!" % self.currTurn)
+                monster = self.deck.draw()
+                # temp...
+                self.dungeon.append(monster)
+            
+        self.currTurn = (self.currTurn + 1) % self.playerNum
 
 if __name__=="__main__":
-    g = Game()
+    g = Game([Player(RandomAgent()) for i in range(3)])
+    print(g)
+    print(g.deck.cards)
+    while g.phase == Phase.BIDDING:
+        g.step()
+    print(g.dungeon)
