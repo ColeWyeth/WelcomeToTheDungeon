@@ -1,40 +1,14 @@
 import random
 from randomAgent import RandomAgent
+from equipment import EffectCode
 from heroes import *
+from monster import Monster, standardMonsters, MS
+from player import Player
 from enum import Enum
 
 class Phase(Enum):
     BIDDING = 0
     DUNGEON = 1
-
-class MS(Enum):
-    GOBLIN = 1
-    SKELETON = 2
-    ORC = 3
-    VAMPIRE = 4
-    GOLEM = 5
-    LICH = 6
-    DEMON = 7
-    DRAGON = 9
-
-class Monster:
-    def __init__(self, name, strength):
-        self.name = name
-        self.strength = strength
-
-    def __repr__(self):
-        return "%s: %d" % (self.name, self.strength)
-
-standardMonsters = set([
-    (2, "Goblin", MS.GOBLIN.value),
-    (2, "Skeleton", MS.SKELETON.value),
-    (2, "Orc", MS.ORC.value),
-    (2, "Vampire", MS.VAMPIRE.value),
-    (2, "Golem", MS.GOLEM.value),
-    (1, "Lich", MS.LICH.value),
-    (1, "Demon", MS.DEMON.value),
-    (1, "Dragon", MS.DRAGON.value),
-])
 
 class Deck:
     def __init__(self, monsterSet):
@@ -53,26 +27,6 @@ class Deck:
 
     def draw(self):
         return self.cards.pop()
-
-class PlayerState:
-    def __init__(self):
-        self.successes = 0
-        self.failures = 0
-        self.active = True
-
-    def isEliminated(self):
-        return self.failures == 2
-    
-    def isVictorious(self):
-        return self.successes == 2
-
-class Player:
-    def __init__(self, agent):
-        self.agent = agent
-        self.state = PlayerState()
-
-    def action(self, obs, actions=None):
-        return self.agent.action(obs, actions)
 
 class Game:
     def __init__(self, hero, players=[]):
@@ -98,19 +52,56 @@ class Game:
 
     def oneActiveRemains(self):
         counter = 0
-        for p in self.players:
-            if p.state.active:
+        activePlayerTurn = None
+        for i, p in enumerate(self.players):
+            if p.isActive():
                 counter += 1
-        return counter == 1
+                activePlayerTurn = i
+        return (counter == 1, activePlayerTurn)
 
     def step(self):
         if self.phase == Phase.BIDDING:
-            if self.oneActiveRemains():
+            exactlyOneActive, activePlayerTurn = self.oneActiveRemains()
+            if exactlyOneActive:
+                self.currTurn = activePlayerTurn
                 self.phase = Phase.DUNGEON
+                self.runDungeonSetup()
+                assert self.players[self.currTurn].isActive()
             else:
                 self.biddingStep()
         else:
-            pass
+            if self.hero.hp <= 0:
+                print("The hero has died!")
+                self.players[self.currTurn].takeLoss() 
+                self.runBiddingSetup()
+            elif not self.dungeon:
+                print("Dungeon clear!")
+                self.players[self.currTurn].takeWin()
+                self.runBiddingSetup()
+            else:
+                self.dungeonStep()
+
+    def checkForWinner(self):
+        numEliminated = 0
+        playerTurnNotEliminated = None
+        for i, p in enumerate(self.players):
+            if p.state.isVictorious():
+                return i
+            if p.state.isEliminated():
+                numEliminated += 1
+            else:
+                playerTurnNotEliminated = i
+        if numEliminated == len(players) - 1:
+            return playerTurnNotEliminated
+        else:
+            return None 
+
+    def runBiddingSetup(self):
+        print("Bidding Phase Beginning!")
+        self.phase = Phase.BIDDING
+        for p in self.players:
+            p.state.active = not p.state.isEliminated()
+        self.hero = Warrior() # TODO: Appropriate type
 
     def biddingStep(self):
         currPlayer = self.players[self.currTurn]
@@ -119,7 +110,9 @@ class Game:
                 # If the deck is empty the current player must pass
                 passes = True
             else:
-                passes = currPlayer.action(self.getObs(),[True,False])
+                passes = currPlayer.action(
+                    self.getObs(),[True,False],"Will you pass (T/F)? "
+                )
             if passes:
                 print("Player %d passed!" % self.currTurn)
                 currPlayer.state.active = False
@@ -128,24 +121,69 @@ class Game:
                 monster = self.deck.draw()
                 a = currPlayer.action(
                     self.getObs(), 
-                    self.hero.itemActions + [-1],
+                    self.hero.getItemActions() + [-1],
                 )
                 if a == -1:
                     print("Adding a monster to the dungeon")
                     self.dungeon.append(monster)
                 else:
-                    print("Removing an item")
+                    print("Removing an item: %s" % self.hero.items[a])
                     self.hero.remove(a)
             
         self.currTurn = (self.currTurn + 1) % self.playerNum
+
+    def runDungeonSetup(self):
+        print("Dungeon Phase Beginning!")
+        print("Dungeon: " + str(self.dungeon))
+        print("Items: " + str(self.hero.items))
+        for item in self.hero.items:
+            code = item.runPreEntry()
+            if code is None:
+                continue
+            else:
+                self.handleSetupCode(item, code)
+
+    def handleSetupCode(self, item, code):
+        if code == EffectCode.VORPAL:
+            prompt = "Which monster would you like to defeat automatically? "
+            prompt += "(Enter its strength): "
+            msv = self.players[self.currTurn].action(
+                self.getObs(),
+                [ms.value for ms in MS],
+                prompt,
+            )
+            item.setTarget(msv)  
+            print(
+                "Player %d is prepared to kill strength %d monsters using %s" %
+                (self.currTurn, msv, item.name)
+            )
+
+    def dungeonStep(self):
+        m = self.dungeon.pop()
+        print("Player %d drew a %s" % (self.currTurn, m.name))
+        for item in self.hero.items:
+            if m.strength in item.getAutoTargets():
+                print("%s killed by %s" % (m.name, item.name))
+                return
+        for item in self.hero.items:
+            optionalTargets = item.getOptionalTargets()
+            if optionalTargets is None:
+                continue
+            if m.strength in optionalTargets:
+                pass # TODO: this is irrelevant for Warrior but important
+
+        # The monster is not defeated by any item
+        self.hero.hp -= m.strength
 
 if __name__=="__main__":
     players = [Player(RandomAgent()) for i in range(3)]
     g = Game(Warrior(), players)
     g.addPlayer(Player(RandomAgent()))
     print(g)
-    print(g.deck.cards)
-    while g.phase == Phase.BIDDING:
+    #print(g.deck.cards)
+    while True:
+        winner = g.checkForWinner()
+        if not winner is None:
+            print("Player %d won!" % winner)
+            break
         g.step()
-    print(g.hero.items)
-    print(g.dungeon)

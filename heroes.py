@@ -1,31 +1,27 @@
-class Equipment:
-    def __init__(self, name):
-        self.name = name
+from equipment import *
 
 class Hero:
     def __init__(self):
-        self.name = "Example"
-        self.initHealth(0)
-        self.items = []
-        self.setItemActions()
+        self.maxHP = self.hp
+        for item in self.items:
+            item.attachToHero(self) 
 
-    def initHealth(self, value):
-        self.startinHealth = value
-        self.health = value
-
-    def setItemActions(self):
-        self.itemActions = list(range(len(self.items)))
+    def getItemActions(self):
+        return list(range(len(self.items)))
 
     def remove(self, idx):
         self.items.pop(idx)
-        self.setItemActions()
 
 class Warrior(Hero):
     def __init__(self):
         self.name = "Warrior"
-        self.initHealth(3)
+        self.hp = 3
         self.items = [
-            Equipment("Vorpal Sword"),
-            Equipment("Shield"), # TODO: make these accurate
+            PlateArmor(),
+            KnightShield(),
+            Torch(),
+            HolyGrail(),
+            VorpalSword(),
+            DragonSpear(),
         ]
-        self.setItemActions()
+        Hero.__init__(self)

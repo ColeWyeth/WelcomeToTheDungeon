@@ -9,6 +9,9 @@ class Equipment:
         self.name = name
         self.hero = None
 
+    def __repr__(self):
+        return self.name
+
     def attachToHero(self, hero):
         self.hero = hero
 
@@ -53,7 +56,7 @@ class PlateArmor(Equipment):
             raise Exception("Equipment is not attached to a hero!")
         else:
             self.hero.hp += 5
-    return Equipment.runPreEntry(self)
+        return Equipment.runPreEntry(self)
 
 class KnightShield(Equipment):
     def __init__(self):
@@ -64,7 +67,7 @@ class KnightShield(Equipment):
             raise Exception("Equipment is not attached to a hero!")
         else:
             self.hero.hp += 3
-    return Equipment.runPreEntry(self)
+        return Equipment.runPreEntry(self)
 
 class Torch(Equipment):
     def __init__(self):
