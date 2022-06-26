@@ -97,7 +97,7 @@ class VorpalSword(Equipment):
         self.target = target
 
     def getAutoTargets(self):
-        return set([target])
+        return set([self.target])
 
 class DragonSpear(Equipment):
     def __init__(self):

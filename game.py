@@ -1,5 +1,6 @@
 import random
 from randomAgent import RandomAgent
+from terminalAgent import TerminalAgent
 from equipment import EffectCode
 from heroes import *
 from monster import Monster, standardMonsters, MS
@@ -38,6 +39,7 @@ class Game:
         self.playerNum = len(players)
         self.players = players
         self.currTurn = 0
+        self.monsterDrawn = None
     
     def __repr__(self):
         return "%d Player Game of Welcome to the Dungeon" % self.playerNum
@@ -102,6 +104,8 @@ class Game:
         for p in self.players:
             p.state.active = not p.state.isEliminated()
         self.hero = Warrior() # TODO: Appropriate type
+        self.deck = Deck(standardMonsters)
+        self.deck.shuffle()
 
     def biddingStep(self):
         currPlayer = self.players[self.currTurn]
@@ -111,17 +115,22 @@ class Game:
                 passes = True
             else:
                 passes = currPlayer.action(
-                    self.getObs(),[True,False],"Will you pass (T/F)? "
+                    self.getObs(),[True,False],"Will you pass (0/1)? "
                 )
             if passes:
                 print("Player %d passed!" % self.currTurn)
                 currPlayer.state.active = False
             else:
                 print("Player %d is still in!" % self.currTurn)
+                prompt = "Current items: " + str(self.hero.items) + "\n"
+                prompt += "Remove one using its index (from 0).\n"
+                prompt += "Enter -1 to add the monster to the dungeon! "
                 monster = self.deck.draw()
+                self.monsterDrawn = monster
                 a = currPlayer.action(
                     self.getObs(), 
                     self.hero.getItemActions() + [-1],
+                    prompt,
                 )
                 if a == -1:
                     print("Adding a monster to the dungeon")
@@ -129,12 +138,14 @@ class Game:
                 else:
                     print("Removing an item: %s" % self.hero.items[a])
                     self.hero.remove(a)
+                self.monsterDrawn = None
             
         self.currTurn = (self.currTurn + 1) % self.playerNum
 
     def runDungeonSetup(self):
         print("Dungeon Phase Beginning!")
-        print("Dungeon: " + str(self.dungeon))
+        #print("Dungeon: " + str(self.dungeon))
+        print("There are %d monsters in this dungeon!" % len(self.dungeon))
         print("Items: " + str(self.hero.items))
         for item in self.hero.items:
             code = item.runPreEntry()
@@ -175,10 +186,13 @@ class Game:
         # The monster is not defeated by any item
         self.hero.hp -= m.strength
 
+    def getObs(self):
+        return self.monsterDrawn # TODO: Make this an actual state
+
 if __name__=="__main__":
-    players = [Player(RandomAgent()) for i in range(3)]
+    players = [Player(RandomAgent()) for i in range(6)]
     g = Game(Warrior(), players)
-    g.addPlayer(Player(RandomAgent()))
+    g.addPlayer(Player(TerminalAgent()))
     print(g)
     #print(g.deck.cards)
     while True:
