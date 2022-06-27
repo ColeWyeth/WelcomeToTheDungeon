@@ -1,8 +1,10 @@
 from agent import Agent
+import pprint
 
 class TerminalAgent(Agent):
     def action(self, obs, actions, description="Enter action: "):
-        print("Observed state: " + str(obs))
+        print("Observed state: ")
+        pprint.pprint(obs)
         a = int(input(description))
         if a in actions:
             return a

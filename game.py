@@ -6,6 +6,8 @@ from heroes import *
 from monster import Monster, standardMonsters, MS
 from player import Player
 from enum import Enum
+from copy import deepcopy
+import json
 
 class Phase(Enum):
     BIDDING = 0
@@ -186,8 +188,44 @@ class Game:
         # The monster is not defeated by any item
         self.hero.hp -= m.strength
 
+    def getFullStateDict(self):
+        """
+        This is a deep copy of a dictionary containing the objects fields.
+        """
+        # Convert everything to a dictionary
+        d = dict()
+        d['hero'] = deepcopy(self.hero.__dict__)
+        d['hero']['items'] = [deepcopy(i.__dict__) for i in self.hero.items]
+        for i in d['hero']['items']:
+            del i['hero']
+        d['phase'] = self.phase.value
+        d['deck'] = [deepcopy(m.__dict__) for m in self.deck.cards]
+        d['dungeon'] = [deepcopy(m.__dict__) for m in self.dungeon]
+        d['playerNum'] = len(self.players)
+        d['players'] = [deepcopy(p.state.__dict__) for p in self.players]
+        d['currTurn'] = self.currTurn
+        if self.monsterDrawn is None:
+            d['monsterDrawn'] = None
+        else:
+            d['monsterDrawn'] = deepcopy(self.monsterDrawn.__dict__)
+        return d
+
+    def getJson(self):
+        return json.dumps(self.getFullStateDict())
+
     def getObs(self):
-        return self.monsterDrawn # TODO: Make this an actual state
+        """
+        This is the full state observable by the current player.
+        """
+        s = self.getFullStateDict()
+        # No one can see the full dungeon or deck
+        s['dungeonSize'] = len(s['dungeon'])
+        del s['dungeon']
+        s['deckSize'] = len(s['deck'])
+        del s['deck']
+        return s
+
+    
 
 if __name__=="__main__":
     players = [Player(RandomAgent()) for i in range(6)]
