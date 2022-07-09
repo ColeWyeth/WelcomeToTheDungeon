@@ -1,5 +1,6 @@
 import random
 from randomAgent import RandomAgent
+from sarsa import Sarsa
 from terminalAgent import TerminalAgent
 from equipment import EffectCode
 from heroes import *
@@ -8,6 +9,7 @@ from player import Player
 from enum import Enum
 from copy import deepcopy
 import json
+import os
 
 class Phase(Enum):
     BIDDING = 0
@@ -42,6 +44,7 @@ class Game:
         self.players = players
         self.currTurn = 0
         self.monsterDrawn = None
+        self.currItemCode = None # Set if we are making a choice about an item
     
     def __repr__(self):
         return "%d Player Game of Welcome to the Dungeon" % self.playerNum
@@ -95,7 +98,7 @@ class Game:
                 numEliminated += 1
             else:
                 playerTurnNotEliminated = i
-        if numEliminated == len(players) - 1:
+        if numEliminated == len(self.players) - 1:
             return playerTurnNotEliminated
         else:
             return None 
@@ -157,6 +160,7 @@ class Game:
                 self.handleSetupCode(item, code)
 
     def handleSetupCode(self, item, code):
+        self.currItemCode = code
         if code == EffectCode.VORPAL:
             prompt = "Which monster would you like to defeat automatically? "
             prompt += "(Enter its strength): "
@@ -170,7 +174,8 @@ class Game:
                 "Player %d is prepared to kill strength %d monsters using %s" %
                 (self.currTurn, msv, item.name)
             )
-
+        self.currItemCode = None
+    
     def dungeonStep(self):
         m = self.dungeon.pop()
         print("Player %d drew a %s" % (self.currTurn, m.name))
@@ -204,6 +209,7 @@ class Game:
         d['playerNum'] = len(self.players)
         d['players'] = [deepcopy(p.state.__dict__) for p in self.players]
         d['currTurn'] = self.currTurn
+        d['currItemCode'] = self.currItemCode
         if self.monsterDrawn is None:
             d['monsterDrawn'] = None
         else:
@@ -225,17 +231,36 @@ class Game:
         del s['deck']
         return s
 
+    def run(self):
+
+        # Inform each agent of its index
+        for i, p in enumerate(self.players):
+            p.agent.setPInd(i)
+
+        while True:
+            winner = self.checkForWinner()
+            if not winner is None:
+                print("Player %d won!" % winner)
+                return winner
+            self.step()
+
     
 
 if __name__=="__main__":
-    players = [Player(RandomAgent()) for i in range(6)]
+    players = [Player(RandomAgent()) for i in range(1)]
     g = Game(Warrior(), players)
+    sa = Sarsa()
+    sa.load(
+        open(
+            os.path.join("example_agents", "baseline_sarsa.pkl"),
+            'rb'
+        ),
+    )
+    sp = Player(sa)
+    g.addPlayer(sp)
     g.addPlayer(Player(TerminalAgent()))
     print(g)
-    #print(g.deck.cards)
-    while True:
-        winner = g.checkForWinner()
-        if not winner is None:
-            print("Player %d won!" % winner)
-            break
-        g.step()
+    g.run()
+    # with open("Q.pkl", 'wb') as f:
+    #     sp.agent.save(f)
+    # print(sp.agent.Q)
