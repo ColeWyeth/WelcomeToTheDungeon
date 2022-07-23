@@ -49,6 +49,13 @@ def action():
     online_player.agent.set_next_action(int(request.form.get("action")))
     return("Action set to " + request.form.get("action"))
 
+@app.route('/history', methods=['GET','POST'])
+def history():
+    g = game_records[0]["game"]
+    h = g.history
+    g.history = []
+    return(str({"history" : h}))
+
 def runFlask():
     app.run()
 

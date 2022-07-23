@@ -45,6 +45,7 @@ class Game:
         self.currTurn = 0
         self.monsterDrawn = None
         self.currItemCode = None # Set if we are making a choice about an item
+        self.history = [] # for frontend
     
     def __repr__(self):
         return "%d Player Game of Welcome to the Dungeon" % self.playerNum
@@ -87,6 +88,7 @@ class Game:
                 self.runBiddingSetup()
             else:
                 self.dungeonStep()
+        self.history.append(self.getJson())
 
     def checkForWinner(self):
         numEliminated = 0
