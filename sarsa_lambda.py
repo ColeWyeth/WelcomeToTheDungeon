@@ -3,12 +3,15 @@ from copy import deepcopy
 import random
 import pickle
 
-class Sarsa(Agent):
-    def __init__(self, learning = True, alpha=0.4, eps=0.1):
+# Page 305 of Sutton and Barto
+class Sarsa_Lambda(Agent):
+    def __init__(self, learning = True, alpha=0.1, eps=0.1, lmda = 0.5):
         self.Q = dict()
+        self.z = dict()
         self.learning = learning
         self.alpha = alpha
         self.eps = eps
+        self.lmda = lmda
         self.s_last = None
         self.a_last = None
     
@@ -31,8 +34,6 @@ class Sarsa(Agent):
             pInf["successes"],
             pInf["failures"],
         )
-
-        #s = str(s)
 
         #s = (s['dungeonSize'], str(s['monsterDrawn']), s['currItemCode'])
 

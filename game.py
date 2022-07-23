@@ -209,7 +209,10 @@ class Game:
         d['playerNum'] = len(self.players)
         d['players'] = [deepcopy(p.state.__dict__) for p in self.players]
         d['currTurn'] = self.currTurn
-        d['currItemCode'] = self.currItemCode
+        if self.currItemCode == None:
+            d['currItemCode'] = None
+        else:
+            d['currItemCode'] = self.currItemCode.value
         if self.monsterDrawn is None:
             d['monsterDrawn'] = None
         else:
