@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>
+        Welcome to the dungeon simulator
+    </title>
+    <style>
+        canvas { border: 1px solid black; }
+    </style>
+</head>
+
+<body>
+    <h1>Welcome to the Dungeon!</h1>
+    <form onsubmit="return SetGameID(this);">
+        <label for="GameID">Enter game ID:</label><br>
+        <input type="text" id="GameID" name="GameID"><br>
+        <input type="submit" value="Submit">
+    </form>
+    <p>Add a new AI player</p>
+    <form onsubmit="return AddAIPlayer();">
+        <input type="radio" id="Random" name="AIPlayerType">
+        <label for="Random">Random</label><br>
+        <input type="radio" id="Sarsa" name="AIPlayerType">
+        <label for="Sarsa">Sarsa</label><br>
+        <input type="submit" value="Submit">
+    </form>
+    <br>
+    <form onsubmit="return JoinGame();">
+        <input type="submit" value="Join Game">
+    </form>
+    <canvas id="GameSimulator" width="800" height="600">
+        failed to render Weclome to the Dungeon graphics
+    </canvas>
+    <script>
+        console.log("Start of code");
+        let gameID = null;
+        let gameJoined = false;
+        const canvas = document.getElementById('GameSimulator');
+        const ctx = canvas.getContext('2d');
+        ctx.font = '30px serif';
+        ctx.fillStyle = 'blue';
+        function OpeningScreen(){ 
+            console.log("Rendering Opening Screen...");
+            ctx.fillText("Join a game to begin...", 0, 50);
+        }
+        function SetGameID(form){
+            console.log("Setting Game ID");
+            gameID = form.elements["GameID"].value;
+            ctx.fillText(gameID, 0, 200);
+            return false;
+        }
+        function AddAIPlayer(form){
+            console.log("Adding AI player.");
+            return false;
+        }
+        function JoinGame(form){
+            console.log("Joining game");
+            gameJoined = true;
+            return false;
+        }
+        function draw(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            if(gameJoined){
+                console.log("Game has been joined, rendering...");
+                if(gameID == null){
+                    console.log("No valid game ID!");
+                    ctx.fillText("Choose a game ID before joining!", 0, 50);
+                }else{
+                    ctx.fillText("Game joined, id " + gameID , 0, 50);
+                }
+            }else{
+                OpeningScreen();
+            }
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+
+
+
+</html>
