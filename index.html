@@ -41,7 +41,9 @@
         let gameID = null;
         let gameEntered = false;
         let playerName = null;
+        let playerInd = null;
         let state = null;
+        let old_state_string = null;
         let state_changed = false;
         let nameList = null;
         const canvas = document.getElementById('GameSimulator');
@@ -85,9 +87,9 @@
         }
         function ParseState(state_string){
             console.log("Parsing state");
-            new_state = JSON.parse(state_string);
-            if (state !== new_state){
-                state = new_state;
+            if (old_state_string !== state_string){
+                old_state_string = state_string
+                state = JSON.parse(state_string);
                 state_changed = true;
             }
             return state
@@ -121,7 +123,7 @@
             xhr.send(formData);
         }
 
-        function RenderPlayer(x, y, name, index, successes, failures){
+        function RenderPlayer(x, y, name, index, successes, failures, active){
             console.log("Rendering player " + name);
             ctx.font = '18px serif';
             ctx.fillStyle = 'black';
@@ -131,6 +133,18 @@
             ctx.fillText("Player number " + String(index), x, y + 18);
             ctx.fillText("Successes: " + String(successes), x, y+36);
             ctx.fillText("Failures: " + String(failures), x, y+54);
+            ctx.fillText("Still in: " + String(active));
+        }
+
+        function RenderImage(name, x, y){
+            ctx.fillStyle = 'black';
+            ctx.font = '12px serif';
+            ctx.fillText(name, x, y);
+            const img = new Image();
+            img.addEventListener('load', function(){
+                ctx.drawImage(img, x, y+10, 100, 150);
+            }, false);
+            img.src = "DungeonImages/" + name.replace(/\s/g, "") + ".png";
         }
 
         function Render(state){
@@ -165,7 +179,22 @@
                 seat = playerSeats[i];
                 curr_p_ind = (playerInd+i)%playerNum;
                 curr_p = state.players[curr_p_ind];
-                RenderPlayer(seat[0], seat[1], nameList[curr_p_ind], curr_p_ind, curr_p.successes, curr_p.failures);    
+                RenderPlayer(seat[0], seat[1], nameList[curr_p_ind], curr_p_ind, curr_p.successes, curr_p.failures, curr_p.active);    
+            }
+
+            // Render Items
+            items = state.hero.items;
+            for(let i = 0; i < items.length; i++){
+                RenderImage(items[i].name, 125*i, 10);
+            }
+
+            if(state.currTurn === playerInd){
+                console.log("Monster drawn is " + String(state.monsterDrawn));
+
+                // Render Monster
+                if(state.monsterDrawn !== null){
+                    RenderImage(state.monsterDrawn.name, 9*canvas.width/20, 3*canvas.height/8);
+                }
             }
         }
 

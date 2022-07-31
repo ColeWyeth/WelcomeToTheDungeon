@@ -46,9 +46,14 @@ class Game:
         self.monsterDrawn = None
         self.currItemCode = None # Set if we are making a choice about an item
         self.history = [] # for frontend
+        self.log = ""
     
     def __repr__(self):
         return "%d Player Game of Welcome to the Dungeon" % self.playerNum
+
+    def printAndLog(self, s):
+        print(s)
+        self.log += s + '\n'
 
     def addPlayer(self, player):
         self.playerNum += 1
@@ -83,7 +88,7 @@ class Game:
                 self.players[self.currTurn].takeLoss() 
                 self.runBiddingSetup()
             elif not self.dungeon:
-                print("Dungeon clear!")
+                self.printAndLog("Dungeon clear!")
                 self.players[self.currTurn].takeWin()
                 self.runBiddingSetup()
             else:
@@ -106,7 +111,7 @@ class Game:
             return None 
 
     def runBiddingSetup(self):
-        print("Bidding Phase Beginning!")
+        self.printAndLog("Bidding Phase Beginning!")
         self.phase = Phase.BIDDING
         for p in self.players:
             p.state.active = not p.state.isEliminated()
@@ -125,10 +130,10 @@ class Game:
                     self.getObs(),[True,False],"Will you pass (0/1)? "
                 )
             if passes:
-                print("Player %d passed!" % self.currTurn)
+                self.printAndLog("Player %d passed!" % self.currTurn)
                 currPlayer.state.active = False
             else:
-                print("Player %d is still in!" % self.currTurn)
+                self.printAndLog("Player %d is still in!" % self.currTurn)
                 prompt = "Current items: " + str(self.hero.items) + "\n"
                 prompt += "Remove one using its index (from 0).\n"
                 prompt += "Enter -1 to add the monster to the dungeon! "
@@ -140,20 +145,20 @@ class Game:
                     prompt,
                 )
                 if a == -1:
-                    print("Adding a monster to the dungeon")
+                    self.printAndLog("Adding a monster to the dungeon")
                     self.dungeon.append(monster)
                 else:
-                    print("Removing an item: %s" % self.hero.items[a])
+                    self.printAndLog("Removing an item: %s" % self.hero.items[a])
                     self.hero.remove(a)
                 self.monsterDrawn = None
             
         self.currTurn = (self.currTurn + 1) % self.playerNum
 
     def runDungeonSetup(self):
-        print("Dungeon Phase Beginning!")
-        #print("Dungeon: " + str(self.dungeon))
-        print("There are %d monsters in this dungeon!" % len(self.dungeon))
-        print("Items: " + str(self.hero.items))
+        self.printAndLog("Dungeon Phase Beginning!")
+        #self.printAndLog("Dungeon: " + str(self.dungeon))
+        self.printAndLog("There are %d monsters in this dungeon!" % len(self.dungeon))
+        self.printAndLog("Items: " + str(self.hero.items))
         for item in self.hero.items:
             code = item.runPreEntry()
             if code is None:
@@ -172,7 +177,7 @@ class Game:
                 prompt,
             )
             item.setTarget(msv)  
-            print(
+            self.printAndLog(
                 "Player %d is prepared to kill strength %d monsters using %s" %
                 (self.currTurn, msv, item.name)
             )
@@ -180,10 +185,10 @@ class Game:
     
     def dungeonStep(self):
         m = self.dungeon.pop()
-        print("Player %d drew a %s" % (self.currTurn, m.name))
+        self.printAndLog("Player %d drew a %s" % (self.currTurn, m.name))
         for item in self.hero.items:
             if m.strength in item.getAutoTargets():
-                print("%s killed by %s" % (m.name, item.name))
+                self.printAndLog("%s killed by %s" % (m.name, item.name))
                 return
         for item in self.hero.items:
             optionalTargets = item.getOptionalTargets()
@@ -245,7 +250,7 @@ class Game:
         while True:
             winner = self.checkForWinner()
             if not winner is None:
-                print("Player %d won!" % winner)
+                self.printAndLog("Player %d won!" % winner)
                 return winner
             self.step()
 

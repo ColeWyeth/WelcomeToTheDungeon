@@ -105,6 +105,12 @@ def history():
     g.history = []
     return(str({"history" : h}))
 
+@app.route('/log', methods=['GET','POST'])
+def getLog():
+    gameID = request.form.get("GameID")
+    g = game_records[gameID]["game"]
+    return(g.log)
+    
 @app.route('/player_names', methods=['GET', 'POST'])
 def names():
     """Returns the names of each player in index order, as json converted list."""
