@@ -50,6 +50,24 @@
         const ctx = canvas.getContext('2d');
         ctx.font = '30px serif';
         ctx.fillStyle = 'blue';
+        let scrollbox = {
+            text: "",
+            text_lines : [],
+            lines_displayed: 15,
+            px: 0,
+            display(x,y,w,h){
+                ctx.fillStyle = 'black';
+                ctx.strokeRect(x,y,w,h);
+                this.px = h/this.lines_displayed;
+                ctx.font = String(this.px) + "px serif";
+                this.text_lines = this.text.split(/\r?\n/);
+                let highest_pos = this.text_lines.length-this.lines_displayed;
+                for(let i = this.text_lines.length -1; i >= Math.max(0, highest_pos); i--){
+                    ctx.fillText(this.text_lines[i], x, h+y-this.px*i);
+                }
+            }
+        }
+
         function OpeningScreen(){ 
             console.log("Rendering Opening Screen...");
             ctx.fillText("Join a game to begin...", 0, 50);
@@ -133,7 +151,7 @@
             ctx.fillText("Player number " + String(index), x, y + 18);
             ctx.fillText("Successes: " + String(successes), x, y+36);
             ctx.fillText("Failures: " + String(failures), x, y+54);
-            ctx.fillText("Still in: " + String(active));
+            ctx.fillText("Still in: " + String(active), x, y+72);
         }
 
         function RenderImage(name, x, y){
@@ -181,6 +199,10 @@
                 curr_p = state.players[curr_p_ind];
                 RenderPlayer(seat[0], seat[1], nameList[curr_p_ind], curr_p_ind, curr_p.successes, curr_p.failures, curr_p.active);    
             }
+
+            // Render game log
+            scrollbox.text = state.log;
+            scrollbox.display(11*canvas.width/20, 7*canvas.height/10, 9*canvas.width/20, 3*canvas.height/10);
 
             // Render Items
             items = state.hero.items;

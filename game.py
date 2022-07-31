@@ -224,6 +224,7 @@ class Game:
             d['monsterDrawn'] = None
         else:
             d['monsterDrawn'] = deepcopy(self.monsterDrawn.__dict__)
+        d["log"] = self.log
         return d
 
     def getJson(self):
