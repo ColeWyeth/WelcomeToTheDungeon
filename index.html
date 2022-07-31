@@ -41,6 +41,9 @@
         let gameID = null;
         let gameEntered = false;
         let playerName = null;
+        let state = null;
+        let state_changed = false;
+        let nameList = null;
         const canvas = document.getElementById('GameSimulator');
         const ctx = canvas.getContext('2d');
         ctx.font = '30px serif';
@@ -52,7 +55,6 @@
         function JoinGame(form){
             console.log("Setting Game ID");
             gameID = form.elements["GameID"].value;
-            ctx.fillText(gameID, 0, 200);
             console.log("Setting Player Name");
             playerName = form.elements["PlayerName"].value;
             console.log("Sending a join game request");
@@ -68,27 +70,125 @@
             xhr.open("POST", "http://127.0.0.1:5000/add_ai_player", true);
             formData = new FormData(form);
             formData.append("GameID", gameID);
-            console.log(formData.get("GameID"));
-            xhr.send();
+            xhr.send(formData);
             return false;
         }
         function StartGame(form){
             console.log("Joining game");
             let xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://127.0.0.1:5000/start_game", true);
             formData = new FormData(); // form itself contains no info
             formData.append("GameID", gameID);
+            xhr.send(formData);
             gameEntered = true;
             return false;
         }
-        function draw(){
+        function ParseState(state_string){
+            console.log("Parsing state");
+            new_state = JSON.parse(state_string);
+            if (state !== new_state){
+                state = new_state;
+                state_changed = true;
+            }
+            return state
+        }
+
+        function GetNameList(){
+            console.log("Getting player name list in index order");
+            let xhr = new XMLHttpRequest();
+             xhr.onreadystatechange = function(){
+                if (xhr.readyState == 4){
+                    nameList = JSON.parse(xhr.response);
+                }
+            }
+            xhr.open('POST', "http://127.0.0.1:5000/player_names", false);
+            formData = new FormData();
+            formData.append("GameID", gameID);
+            xhr.send(formData);
+        }
+
+        function UpdateState(){
+            console.log("Updating state");
+            let xhr = new XMLHttpRequest();
+             xhr.onreadystatechange = function(){
+                if (xhr.readyState == 4){
+                    state = ParseState(xhr.response);
+                }
+            }
+            xhr.open('POST', "http://127.0.0.1:5000/game_state", true);
+            formData = new FormData();
+            formData.append("GameID", gameID);
+            xhr.send(formData);
+        }
+
+        function RenderPlayer(x, y, name, index, successes, failures){
+            console.log("Rendering player " + name);
+            ctx.font = '18px serif';
+            ctx.fillStyle = 'black';
+            x = x*canvas.width;
+            y = y*canvas.height;
+            ctx.fillText(name, x, y);
+            ctx.fillText("Player number " + String(index), x, y + 18);
+            ctx.fillText("Successes: " + String(successes), x, y+36);
+            ctx.fillText("Failures: " + String(failures), x, y+54);
+        }
+
+        function Render(state){
             ctx.clearRect(0,0,canvas.width,canvas.height);
+
+            // Render deck
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(canvas.width/4, 3*canvas.height/8, 100, 150);
+            ctx.font = '20px serif';
+            ctx.fillStyle = 'black';
+            ctx.fillText("Deck: " + String(state.deck.length), canvas.width/4, 3*canvas.height/8);
+
+            // Render dungeon
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(3*canvas.width/5, 3*canvas.height/8, 100, 150);
+            ctx.font = '20px serif';
+            ctx.fillStyle = 'black';
+            ctx.fillText("Dungeon: " + String(state.dungeon.length), 3*canvas.width/5, 3*canvas.height/8);
+
+            // Render Player Scores
+            playerNum = nameList.length
+            for(let i = 0; i < playerNum; i++){
+                if(nameList[i] == playerName){
+                    playerInd = i;
+                }
+            }
+            playerSeats = [[1/3, 4/5], [0, 1/2], [4/5, 1/2]];
+            seat = null;
+            curr_p_ind = 0;
+            curr_p = null;
+            for(let i = 0; i < playerNum; i++){
+                seat = playerSeats[i];
+                curr_p_ind = (playerInd+i)%playerNum;
+                curr_p = state.players[curr_p_ind];
+                RenderPlayer(seat[0], seat[1], nameList[curr_p_ind], curr_p_ind, curr_p.successes, curr_p.failures);    
+            }
+        }
+
+        function draw(){
             if(gameEntered){
                 console.log("Game has been joined, rendering...");
                 if(gameID == null){
                     console.log("No valid game ID!");
-                    ctx.fillText("Choose a game ID before joining!", 0, 50);
+                    ctx.fillText("Choose a game ID before joining!", 0, 100);
                 }else{
-                    ctx.fillText("Game started, id " + gameID + ", Player: " + playerName , 0, 50);
+                    function delay(time){
+                        return new Promise(resolve => setTimeout(resolve,time));
+                    }
+                    delay(1000);
+                    // Player order is needed for rendering
+                    if(nameList === null){
+                        GetNameList();
+                    }
+                    UpdateState();
+                    if(state_changed){
+                        Render(state);
+                        state_changed = false;
+                    }
                 }
             }else{
                 OpeningScreen();

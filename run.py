@@ -10,6 +10,7 @@ from sarsa import Sarsa
 from heroes import Warrior
 from threading import Thread 
 import os
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -29,19 +30,19 @@ def join_game():
     online_player = Player(FlaskAgent())
     g.addPlayer(online_player)
     game_records[gameID]["online_players"][request.form.get("PlayerName")] = online_player
+    print("Game ID %s, added player %s" % (gameID, request.form.get("PlayerName")))
     return("Success")
 
 @app.route('/add_ai_player', methods=['GET','POST'])
 def addAIPlayer():
     print("Received request to add a new AI Player")
     gameID = request.form.get("GameID")
+    playerType = request.form.get("PlayerType")
     if not gameID in game_records.keys():
         err_msg = "Failure: There is no game with this ID: "
         print(err_msg)
-        print(gameID)
         return(err_msg)
     g = game_records[gameID]["game"]
-    playerType = request.form.get("PlayerType")
     if playerType == "Random":
         msg = "Adding random player"
         print(msg)
@@ -103,6 +104,30 @@ def history():
     h = g.history
     g.history = []
     return(str({"history" : h}))
+
+@app.route('/player_names', methods=['GET', 'POST'])
+def names():
+    """Returns the names of each player in index order, as json converted list."""
+    gameID = request.form.get("GameID")
+    if not gameID in game_records.keys():
+        err_msg = "Failure: There is no game with this ID: "
+        print(err_msg)
+        return(err_msg)
+    online_players = game_records[gameID]["online_players"]
+    g = game_records[gameID]["game"]
+    players = g.players
+    # correlate player names with player IDs
+    name_id_list = []
+    for p in players:
+        online = False
+        for k in online_players.keys():
+            if online_players[k] == p:
+                online = True
+                name_id_list.append((k, p.agent.pInd))
+        if not online:
+            name_id_list.append((p.agent.name(), p.agent.pInd))
+    name_id_list.sort(key = lambda x: x[1])
+    return json.dumps([x[0] for x in name_id_list])
 
 def runFlask():
     app.run()
