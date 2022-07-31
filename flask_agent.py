@@ -13,6 +13,11 @@ class FlaskAgent(Agent):
             lambda : not self.next_action is None,
             waiting_for="flask agent action",
         )
-        action = self.next_action
+        a = self.next_action
+        if a in actions:
+            action = a
+        else:
+            print("Invalid choice, taking first action")
+            action = actions[0]
         self.next_action = None
         return action        

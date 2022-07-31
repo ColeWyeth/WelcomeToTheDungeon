@@ -1,57 +1,105 @@
 from flask import Flask 
 from flask import request
+from flask_cors import CORS
 from game import Game 
 from player import Player
 from flask_agent import FlaskAgent
 from randomAgent import RandomAgent
 from terminalAgent import TerminalAgent
+from sarsa import Sarsa
 from heroes import Warrior
 from threading import Thread 
+import os
 
 app = Flask(__name__)
+CORS(app)
 
-game_records = []
+game_records = dict()
 
-@app.route('/start_game', methods=['GET', 'POST'])
-def start_game():
-    g = Game(Warrior(), [])
+@app.route('/join_game', methods=['GET', 'POST'])
+def join_game():
+    gameID = request.form.get("GameID");
+    if gameID in game_records.keys():
+        print("Game already exists")
+    else:
+        print("Creating game")
+        g = Game(Warrior(), [])
+        game_records[gameID] = {"game":g, "online_players":{}, "started":False, "thread": None}
+    g = game_records[gameID]["game"]
     online_player = Player(FlaskAgent())
     g.addPlayer(online_player)
-    game_records.append({"game":g, "online_players":[online_player]})
+    game_records[gameID]["online_players"][request.form.get("PlayerName")] = online_player
+    return("Success")
 
-    def runGame():
-        print("Entered main loop")
-        while True:
-            winner = g.checkForWinner()
-            if not winner is None:
-                print("Player %d won!" % winner)
-                break
-            g.step()
-
-    if request.method == 'POST' or request.method == 'GET':
-        # for p in ["p1", "p2"]:
-        #     if request.form.get(p) == "RandomAgent":
-        #         g.addPlayer(Player(RandomAgent()))
+@app.route('/add_ai_player', methods=['GET','POST'])
+def addAIPlayer():
+    print("Received request to add a new AI Player")
+    gameID = request.form.get("GameID")
+    if not gameID in game_records.keys():
+        err_msg = "Failure: There is no game with this ID: "
+        print(err_msg)
+        print(gameID)
+        return(err_msg)
+    g = game_records[gameID]["game"]
+    playerType = request.form.get("PlayerType")
+    if playerType == "Random":
+        msg = "Adding random player"
+        print(msg)
         g.addPlayer(Player(RandomAgent()))
-        t = Thread(target=runGame)
-        t.start()
-        return("Game started:\n" + str(g))
-    return("Game not started")
+        return(msg)
+    elif playerType == "Sarsa":
+        msg = "Adding Sarsa player"
+        print(msg)
+        sa = Sarsa()
+        sa.load(
+            open(
+                os.path.join("example_agents", "baseline_sarsa.pkl"),
+                'rb'
+            ),
+        )
+        sp = Player(sa)
+        g.addPlayer(sp)
+        return(msg)
+    else:
+        return("Player type not recognized")
+
+@app.route('/start_game', methods=['GET','POST'])
+def start_game():
+    gameID = request.form.get("GameID")
+    if not gameID in game_records.keys():
+        err_msg = "Failure: There is no game with this ID"
+        print(err_msg)
+        return(err_msg)
+    elif game_records[gameID]["started"]:
+        msg = "Game already started"
+        print(msg)
+        return(msg)
+    g = game_records[gameID]["game"]
+    def runGame():
+        g.run()
+    t = Thread(target=runGame)
+    t.start()
+    game_records[gameID]["started"] = True 
+    game_records[gameID]["thread"] = t
+    return("Game started:\n" + str(g))
 
 @app.route('/game_state', methods=['GET', 'POST'])
 def state():
-    g = game_records[0]["game"]
+    g = game_records[request.form.get("GameID")]["game"]
     return g.getJson()
 
 @app.route('/action', methods=['GET','POST'])
 def action():
-    online_player = game_records[0]["online_players"][0]
+    gameID = request.form.get("GameID")
+    playerName = request.form.get("PlayerName")
+    online_player = game_records[gameID]["online_players"][playerName]
     online_player.agent.set_next_action(int(request.form.get("action")))
     return("Action set to " + request.form.get("action"))
 
 @app.route('/history', methods=['GET','POST'])
 def history():
-    g = game_records[0]["game"]
+    gameID = request.form.get("GameID")
+    g = game_records[gameID]["game"]
     h = g.history
     g.history = []
     return(str({"history" : h}))

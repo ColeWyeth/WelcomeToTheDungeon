@@ -13,22 +13,25 @@
 
 <body>
     <h1>Welcome to the Dungeon!</h1>
-    <form onsubmit="return SetGameID(this);">
-        <label for="GameID">Enter game ID:</label><br>
+    <p>Join/Create Game</p>
+    <form onsubmit="return JoinGame(this);">
+        <label for="GameID">Game ID:</label><br>
         <input type="text" id="GameID" name="GameID"><br>
+        <label for="PlayerName">Player Name:</label><br>
+        <input type="text" id="PlayerName" name="PlayerName"><br>
         <input type="submit" value="Submit">
     </form>
     <p>Add a new AI player</p>
-    <form onsubmit="return AddAIPlayer();">
-        <input type="radio" id="Random" name="AIPlayerType">
+    <form onsubmit="return AddAIPlayer(this);">
+        <input type="radio" id="Random" value="Random" name="PlayerType">
         <label for="Random">Random</label><br>
-        <input type="radio" id="Sarsa" name="AIPlayerType">
+        <input type="radio" id="Sarsa" value="Sarsa" name="PlayerType">
         <label for="Sarsa">Sarsa</label><br>
         <input type="submit" value="Submit">
     </form>
     <br>
-    <form onsubmit="return JoinGame();">
-        <input type="submit" value="Join Game">
+    <form onsubmit="return StartGame();">
+        <input type="submit" value="Start/Enter Game">
     </form>
     <canvas id="GameSimulator" width="800" height="600">
         failed to render Weclome to the Dungeon graphics
@@ -36,7 +39,8 @@
     <script>
         console.log("Start of code");
         let gameID = null;
-        let gameJoined = false;
+        let gameEntered = false;
+        let playerName = null;
         const canvas = document.getElementById('GameSimulator');
         const ctx = canvas.getContext('2d');
         ctx.font = '30px serif';
@@ -45,30 +49,46 @@
             console.log("Rendering Opening Screen...");
             ctx.fillText("Join a game to begin...", 0, 50);
         }
-        function SetGameID(form){
+        function JoinGame(form){
             console.log("Setting Game ID");
             gameID = form.elements["GameID"].value;
             ctx.fillText(gameID, 0, 200);
+            console.log("Setting Player Name");
+            playerName = form.elements["PlayerName"].value;
+            console.log("Sending a join game request");
+            //$.post("/join_game", JSON.stringify({"GameID": gameID, "PlayerName": playerName}));
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://127.0.0.1:5000/join_game", true);
+            xhr.send(new FormData(form));
             return false;
         }
         function AddAIPlayer(form){
             console.log("Adding AI player.");
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://127.0.0.1:5000/add_ai_player", true);
+            formData = new FormData(form);
+            formData.append("GameID", gameID);
+            console.log(formData.get("GameID"));
+            xhr.send();
             return false;
         }
-        function JoinGame(form){
+        function StartGame(form){
             console.log("Joining game");
-            gameJoined = true;
+            let xhr = new XMLHttpRequest();
+            formData = new FormData(); // form itself contains no info
+            formData.append("GameID", gameID);
+            gameEntered = true;
             return false;
         }
         function draw(){
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            if(gameJoined){
+            if(gameEntered){
                 console.log("Game has been joined, rendering...");
                 if(gameID == null){
                     console.log("No valid game ID!");
                     ctx.fillText("Choose a game ID before joining!", 0, 50);
                 }else{
-                    ctx.fillText("Game joined, id " + gameID , 0, 50);
+                    ctx.fillText("Game started, id " + gameID + ", Player: " + playerName , 0, 50);
                 }
             }else{
                 OpeningScreen();
