@@ -84,7 +84,7 @@ class Game:
                 self.biddingStep()
         else:
             if self.hero.hp <= 0:
-                print("The hero has died!")
+                self.printAndLog("The hero has died!")
                 self.players[self.currTurn].takeLoss() 
                 self.runBiddingSetup()
             elif not self.dungeon:
@@ -118,6 +118,7 @@ class Game:
         self.hero = Warrior() # TODO: Appropriate type
         self.deck = Deck(standardMonsters)
         self.deck.shuffle()
+        self.dungeon = []
 
     def biddingStep(self):
         currPlayer = self.players[self.currTurn]

@@ -39,13 +39,16 @@
     <script>
         console.log("Start of code");
         let gameID = null;
-        let gameEntered = false;
+        let gamesEntered = new Set();
         let playerName = null;
         let playerInd = null;
         let state = null;
         let old_state_string = null;
         let state_changed = false;
         let nameList = null;
+        let rect_actions = [];
+        let image_w = 100;
+        let image_h = 150;
         const canvas = document.getElementById('GameSimulator');
         const ctx = canvas.getContext('2d');
         ctx.font = '30px serif';
@@ -63,7 +66,7 @@
                 this.text_lines = this.text.split(/\r?\n/);
                 let highest_pos = this.text_lines.length-this.lines_displayed;
                 for(let i = this.text_lines.length -1; i >= Math.max(0, highest_pos); i--){
-                    ctx.fillText(this.text_lines[i], x, h+y-this.px*i);
+                    ctx.fillText(this.text_lines[i], x, y+h - this.px*(this.text_lines.length - i - 1) );
                 }
             }
         }
@@ -82,6 +85,7 @@
             let xhr = new XMLHttpRequest();
             xhr.open("POST", "http://127.0.0.1:5000/join_game", true);
             xhr.send(new FormData(form));
+            nameList = null; // player names may be different in this new game
             return false;
         }
         function AddAIPlayer(form){
@@ -100,7 +104,39 @@
             formData = new FormData(); // form itself contains no info
             formData.append("GameID", gameID);
             xhr.send(formData);
-            gameEntered = true;
+            gamesEntered.add(gameID);
+            return false;
+        }
+        function getMousePos(evt){
+            let rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+        function inRect(pos, rect){
+            let inXrange = (pos.x >= rect.x) && (pos.x <= rect.x + rect.w);
+            let inYrange = (pos.y >= rect.y) && (pos.y <= rect.y + rect.h);
+            return(inXrange&&inYrange);
+        }
+        canvas.onmousedown = function(e){
+            pos = getMousePos(e);
+            console.log("Click at position " + String(pos.x) + ", " + String(pos.y) + " on canvas.");
+            for(let i = 0; i < rect_actions.length; i++){
+                if(inRect(pos, rect_actions[i])){
+                    TakeAction(rect_actions[i].a);
+                }
+            }
+        }
+        function TakeAction(num){
+            console.log("Taking action " + String(num));
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://127.0.0.1:5000/action", true);
+            formData = new FormData();
+            formData.append("GameID", gameID);
+            formData.append("PlayerName", playerName);
+            formData.append("action", num);
+            xhr.send(formData);
             return false;
         }
         function ParseState(state_string){
@@ -160,12 +196,13 @@
             ctx.fillText(name, x, y);
             const img = new Image();
             img.addEventListener('load', function(){
-                ctx.drawImage(img, x, y+10, 100, 150);
+                ctx.drawImage(img, x, y+10, image_w, image_h);
             }, false);
             img.src = "DungeonImages/" + name.replace(/\s/g, "") + ".png";
         }
 
         function Render(state){
+            rect_actions = [];
             ctx.clearRect(0,0,canvas.width,canvas.height);
 
             // Render deck
@@ -183,16 +220,16 @@
             ctx.fillText("Dungeon: " + String(state.dungeon.length), 3*canvas.width/5, 3*canvas.height/8);
 
             // Render Player Scores
-            playerNum = nameList.length
+            let playerNum = nameList.length
             for(let i = 0; i < playerNum; i++){
                 if(nameList[i] == playerName){
                     playerInd = i;
                 }
             }
-            playerSeats = [[1/3, 4/5], [0, 1/2], [4/5, 1/2]];
-            seat = null;
-            curr_p_ind = 0;
-            curr_p = null;
+            let playerSeats = [[1/6, 4/5], [0, 1/2], [4/5, 1/2]];
+            let seat = null;
+            let curr_p_ind = 0;
+            let curr_p = null;
             for(let i = 0; i < playerNum; i++){
                 seat = playerSeats[i];
                 curr_p_ind = (playerInd+i)%playerNum;
@@ -202,12 +239,16 @@
 
             // Render game log
             scrollbox.text = state.log;
-            scrollbox.display(11*canvas.width/20, 7*canvas.height/10, 9*canvas.width/20, 3*canvas.height/10);
+            scrollbox.display(canvas.width/2, 7*canvas.height/10, canvas.width/2, 3*canvas.height/10);
 
             // Render Items
-            items = state.hero.items;
+            let items = state.hero.items;
             for(let i = 0; i < items.length; i++){
                 RenderImage(items[i].name, 125*i, 10);
+                if(state.currTurn === playerInd){
+                    let image_rect = {x: 125*i, y: 10, w: image_w, h: image_h, a: i};
+                    rect_actions.push(image_rect);
+                }
             }
 
             if(state.currTurn === playerInd){
@@ -215,13 +256,44 @@
 
                 // Render Monster
                 if(state.monsterDrawn !== null){
-                    RenderImage(state.monsterDrawn.name, 9*canvas.width/20, 3*canvas.height/8);
+                    console.log("A monster has been drawn");
+                    let rect_a = {x: 9*canvas.width/20, y: 3*canvas.height/8, w: image_w, h: image_h, a: -1 };
+                    RenderImage(state.monsterDrawn.name, rect_a.x, rect_a.y);
+                    rect_actions.push(rect_a)
+                }else if(state.currItemCode === null){
+                    console.log("Choosing whether to pass.");
+                    ctx.fillStyle = 'black';
+                    ctx.font = "20px serif";
+                    let midline = 9*canvas.width/20;
+                    ctx.fillText("Pass?", midline, 3*canvas.height/8);
+                    yes_box_rect = {x: midline, y: 3*canvas.height/8, w: 100, h: 50, a: 1};
+                    ctx.strokeRect(yes_box_rect.x, yes_box_rect.y, yes_box_rect.w, yes_box_rect.h);
+                    ctx.fillText("Yes", yes_box_rect.x, yes_box_rect.y + 20);
+                    no_box_rect = {x: midline, y: 3*canvas.height/8 + 55, w: 100, h: 50, a: 0};    
+                    ctx.strokeRect(no_box_rect.x, no_box_rect.y, no_box_rect.w, no_box_rect.h);
+                    ctx.fillText("No", no_box_rect.x, no_box_rect.y+20);
+                    rect_actions.push(yes_box_rect);
+                    rect_actions.push(no_box_rect);
+                }else{ // TODO: Effects other than Vorpal Sword
+                    console.log("The Vorpal Sword must choose its target...");
+                    ctx.fillStyle = 'black';
+                    ctx.font = "12px serif";
+                    let midline = 9*canvas.width/20;
+                    ctx.fillText("Choose Vorpal Sword target", midline-50, 3*canvas.height/8);
+                    let monsterPowers = [1,2,3,4,5,6,7,9];
+                    for(let i = 0; i < monsterPowers.length; i++){
+                        num_rect = {x: midline, y: 3*canvas.height/8 + 25*(i+1), w: 25, h: 25, a: monsterPowers[i]};
+                        ctx.strokeRect(num_rect.x, num_rect.y, num_rect.w, num_rect.h);
+                        ctx.fillText(String(monsterPowers[i]), num_rect.x, num_rect.y + 20)
+                        rect_actions.push(num_rect);
+                    }
+
                 }
             }
         }
 
         function draw(){
-            if(gameEntered){
+            if(gamesEntered.has(gameID)){
                 console.log("Game has been joined, rendering...");
                 if(gameID == null){
                     console.log("No valid game ID!");
@@ -249,6 +321,17 @@
 
         draw();
     </script>
+
+    <p>
+        See <a href="https://www.fgbradleys.com/rules/rules3/WelcometotheDungeonrules.pdf">the rules</a> for <a href="https://boardgamegeek.com/boardgame/150312/welcome-dungeon">Welcome to the Dungeon</a>, designed by Hisanori Hiraoka and Masato Uesugi. It's a fun board game for small parties, very affordable. Here is a summary:
+        Each monster has a certain power: Goblins 1, Skeletons 2, Orcs 3, Vampires 4, Golems 5, Lichs 6, Demons 7, and Dragons 9. 
+        Each item deals with some monsters: Torch kills less than 3 strength, Holy Grail even strength, the Dragon Spear kills the Dragon, and the Vorpal Sword kills a type you choose before entering.
+        The Knight Shield and Plate Armor increase your base health (3 for the Warrior) by 3 and 5 respectively. 
+        If a monster isn't killed its strength is subtracted from your health. 
+        During the bidding phase, until you choose to pass, you can either add monsters to the dungeon or remove items from the hero (both by clicking on them). Whoever is last to pass goes in. Two successes is a win, two failures and you're out.
+        Currently the only A.I. player implemented is a Sarsa agent (see the classic book on reinforcement learning, <a href="http://incompleteideas.net/book/the-book-2nd.html">Sutton and Barto</a>).
+        Games are also limited to 3 players including yourself. To the best of my knowledge this is the only online implementation (using art mostly from Kentaro Miura's Berserk for a little variety).
+    </p>
 </body>
 
 
