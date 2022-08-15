@@ -34,7 +34,7 @@ class Deck:
         return self.cards.pop()
 
 class Game:
-    def __init__(self, hero, players=[]):
+    def __init__(self, hero, players=[], verbose=True):
         self.hero = hero
         self.phase = Phase.BIDDING
         self.deck = Deck(standardMonsters)
@@ -47,12 +47,14 @@ class Game:
         self.currItemCode = None # Set if we are making a choice about an item
         self.history = [] # for frontend
         self.log = ""
+        self.verbose = verbose
     
     def __repr__(self):
         return "%d Player Game of Welcome to the Dungeon" % self.playerNum
 
     def printAndLog(self, s):
-        print(s)
+        if self.verbose:
+            print(s)
         self.log += s + '\n'
 
     def addPlayer(self, player):

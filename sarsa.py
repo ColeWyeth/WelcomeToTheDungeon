@@ -2,6 +2,7 @@ from agent import Agent
 from copy import deepcopy
 import random
 import pickle
+from bridge import minimal_bridge
 
 class Sarsa(Agent):
     def __init__(self, learning = True, alpha=0.4, eps=0.1):
@@ -11,26 +12,10 @@ class Sarsa(Agent):
         self.eps = eps
         self.s_last = None
         self.a_last = None
+        self.bridge = lambda x: minimal_bridge(self, x)
     
     def action(self, obs, actions, description=None):
-        s = deepcopy(obs)
-
-        if s["monsterDrawn"] is None:
-            md = None
-        else:
-            md = s["monsterDrawn"]["strength"]
-        
-        # Agents are informed of their index when the game starts
-        pInf = s["players"][self.pInd]
-
-        s = (
-            s["dungeonSize"],
-            md,
-            s["currItemCode"],
-            len(s["hero"]["items"]),
-            pInf["successes"],
-            pInf["failures"],
-        )
+        s, R = self.bridge(obs)
 
         #s = str(s)
 
@@ -51,7 +36,7 @@ class Sarsa(Agent):
         #print("In state " + str(s) + " choosing action " + str(chosenA))
         if self.learning and not self.s_last is None:
             self.Q[(self.s_last, self.a_last)] += self.alpha * (
-                0 + 1 * self.Q[(s,chosenA)] - self.Q[(self.s_last, self.a_last)]
+                R + 1 * self.Q[(s,chosenA)] - self.Q[(self.s_last, self.a_last)]
             )
         self.s_last, self.a_last = s, chosenA
         return chosenA
