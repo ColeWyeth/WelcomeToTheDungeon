@@ -81,6 +81,6 @@ def test_against_random(agent, episodes, playerNum = lambda e: 2):
     print("%d wins out of %d" % (wins, episodes))
 
 if __name__ == "__main__":
-    a = Sarsa_Lambda()
-    training_arc(a, 10000, self_play=False)
+    a = Sarsa()
+    training_arc(a, 10000, self_play=True)
     test_against_random(a, 100)
