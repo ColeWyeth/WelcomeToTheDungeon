@@ -47,6 +47,15 @@ class Equipment:
         """
         return None
 
+WARRIOR_ITEM_NAMES = [
+    "Plate Armor",
+    "Knight Shield",
+    "Torch",
+    "Holy Grail",
+    "Vorpal Sword",
+    "Dragon Spear",
+]
+
 class PlateArmor(Equipment):
     def __init__(self):
         Equipment.__init__(self, "Plate Armor")
