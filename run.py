@@ -7,6 +7,8 @@ from flask_agent import FlaskAgent
 from randomAgent import RandomAgent
 from terminalAgent import TerminalAgent
 from sarsa import Sarsa
+from sarsa_lambda import Sarsa_Lambda
+from double_DQN import DoubleDQN
 from heroes import Warrior
 from threading import Thread 
 import os
@@ -54,12 +56,38 @@ def addAIPlayer():
         sa = Sarsa()
         sa.load(
             open(
-                os.path.join("example_agents", "baseline_sarsa.pkl"),
+                os.path.join("example_agents", "Sarsa_rec.pkl"),
                 'rb'
             ),
         )
         sp = Player(sa)
         g.addPlayer(sp)
+        return(msg)
+    elif playerType == "SarsaLambda":
+        msg = "Adding Sarsa Lambda Player"
+        print(msg)
+        sla = Sarsa_Lambda()
+        sla.load(
+            open(
+                os.path.join("example_agents", "Sarsa_Lambda_rec.pkl"),
+                'rb'
+            ),
+        )
+        slp = Player(sla)
+        g.addPlayer(slp)
+        return(msg)
+    elif playerType == "DoubleDQN":
+        msg = "Addding Double DQN player"
+        print(msg)
+        dqna = DoubleDQN(learning=False)
+        dqna.load(
+            open(
+                os.path.join("example_agents", "Double_DQN.pkl"),
+                'rb'
+            ),
+        )
+        dqnp = Player(dqna)
+        g.addPlayer(dqnp)
         return(msg)
     else:
         return("Player type not recognized")
