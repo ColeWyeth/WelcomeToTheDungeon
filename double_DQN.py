@@ -5,6 +5,8 @@ import pickle
 import random
 import numpy as np
 
+from short_term_memory import AddShortTermMemoryUnit
+
 class Q_net(torch.nn.Module):
     def __init__(self, in_dim, out_dim, hidden_units=200):
         torch.nn.Module.__init__(self)
@@ -171,4 +173,11 @@ class DoubleDQN(Agent):
             self.sync_Q_target()
             self.steps_since_sync = 0
         
-        
+class Double_DQN_NGram(DoubleDQN):
+    def __init__(self, learning = True, alpha=1.0, eps=0.05, buffSize = 1000, bridge=vector_encoding(), size=3):
+        super().__init__(self, learning, alpha, eps, bridge)
+        AddShortTermMemoryUnit(self, size)
+
+    def terminateEpisode(self, win=False):
+        super().terminateEpisode(win)
+        self.stmu.setBlank()

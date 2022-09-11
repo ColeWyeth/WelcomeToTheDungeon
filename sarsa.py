@@ -4,6 +4,8 @@ import random
 import pickle
 from bridge import minimal_bridge
 
+from short_term_memory import AddShortTermMemoryUnit
+
 class Sarsa(Agent):
     def __init__(self, learning = True, alpha=0.4, eps=0.1, bridge = minimal_bridge()):
         self.Q = dict()
@@ -16,6 +18,7 @@ class Sarsa(Agent):
     
     def action(self, obs, actions, description=None):
         s, R = self.applyBridge(obs)
+        print(s)
 
         #s = str(s)
 
