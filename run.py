@@ -82,7 +82,7 @@ def addAIPlayer():
         dqna = DoubleDQN(learning=False)
         dqna.load(
             open(
-                os.path.join("example_agents", "Double_DQN.pkl"),
+                os.path.join("example_agents", "Double_DQN_rec.pkl"),
                 'rb'
             ),
         )

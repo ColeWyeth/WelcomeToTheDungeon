@@ -5,17 +5,17 @@ import pickle
 from bridge import minimal_bridge
 
 class Sarsa(Agent):
-    def __init__(self, learning = True, alpha=0.4, eps=0.1):
+    def __init__(self, learning = True, alpha=0.4, eps=0.1, bridge = minimal_bridge()):
         self.Q = dict()
         self.learning = learning
         self.alpha = alpha
         self.eps = eps
         self.s_last = None
-        self.a_last = None
-        self.bridge = lambda x: minimal_bridge(self, x)
+        self.a_last = None        
+        self.bridge = bridge
     
     def action(self, obs, actions, description=None):
-        s, R = self.bridge(obs)
+        s, R = self.applyBridge(obs)
 
         #s = str(s)
 
@@ -58,6 +58,16 @@ class Sarsa(Agent):
         )
 
         self.s_last, self.a_last = None, None
+
+class Sarsa_NGram(Sarsa):
+    def __init__(self, learning = True, alpha=0.4, eps=0.1, bridge = minimal_bridge(), size=3):
+        Sarsa.__init__(self, learning, alpha, eps, bridge)
+        AddShortTermMemoryUnit(self, size, hashable=True)
+
+    def terminateEpisode(self, win=False):
+        super().terminateEpisode(win)
+        self.stmu.setBlank()
+
 
 if __name__ == "__main__":
     a = Sarsa()

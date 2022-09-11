@@ -26,7 +26,7 @@ class Q_net(torch.nn.Module):
 # Deep Reinforcement Learning with Double Q-learning
 # (the implementation is mine)
 class DoubleDQN(Agent):
-    def __init__(self, learning = True, alpha=1.0, eps=0.05, buffSize = 1000):
+    def __init__(self, learning = True, alpha=1.0, eps=0.05, buffSize = 1000, bridge=vector_encoding()):
         self.learning = learning
         self.alpha = alpha
         self.eps = eps
@@ -34,18 +34,23 @@ class DoubleDQN(Agent):
         self.buffInd = 0
         # Vector encoding has 5 + 6 = 11 features
         # We also enter 1 action for 12 inputs
-        self.Q = Q_net(12, 1)
-        self.Q_target = Q_net(12, 1)
+        self.Q = Q_net(bridge.dimension+1, 1)
+        self.Q_target = Q_net(bridge.dimension+1, 1)
         self.playback_buffer = []
         self.sync_Q_target()
-        self.bridge = lambda x: vector_encoding(self, x)
+        self.bridge = bridge
         # Previous state, action
         self.s_t = None
         self.a_t = None
         self.steps_since_sync = 0
 
+    def setBridge(self, bridge):
+        Agent.setBridge(self, bridge)
+        self.Q = Q_net(bridge.dimension+1, 1)
+        self.Q_target = Q_net(bridge.dimension+1, 1)
+
     def action(self, obs, actions, description=None):
-        s, r = self.bridge(obs)
+        s, r = self.applyBridge(obs)
         #print(s)
 
         bestQVal = -float("inf")
@@ -151,9 +156,13 @@ class DoubleDQN(Agent):
         #print("y: " + str(y_set.shape) + str(y_set))
         #print("pred: " + str(pred.shape) + str(pred))
         l = torch.linalg.norm(torch.clip(pred - y_set, -1, 1))#loss(pred, y_set.unsqueeze(1))
+        #l = 2*loss(pred, y_set)
         #print("Loss:")
         #print(l)
         l.backward()
+        # for param in self.Q.parameters():
+        #     param.grad.data.clamp_(-1, 1)
+        #torch.nn.utils.clip_grad_value_(self.Q.parameters(), 1)
         optim.step()
         self.steps_since_sync += 1
 

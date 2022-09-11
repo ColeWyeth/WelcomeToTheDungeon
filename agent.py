@@ -19,3 +19,9 @@ class Agent:
     
     def load(self, f):
         pass
+
+    def applyBridge(self, obs):
+        return self.bridge(self, obs)
+
+    def setBridge(self, bridge):
+        self.bridge = bridge

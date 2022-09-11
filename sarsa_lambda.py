@@ -1,12 +1,15 @@
+from ast import Add
 from agent import Agent
 from copy import deepcopy
 import random
 import pickle
 from bridge import minimal_bridge
 
+from short_term_memory import AddShortTermMemoryUnit
+
 # Page 305 of Sutton and Barto
 class Sarsa_Lambda(Agent):
-    def __init__(self, learning = True, alpha=0.1, eps=0.1, lmbda = 0.5):
+    def __init__(self, learning = True, alpha=0.1, eps=0.1, lmbda = 0.5, bridge=minimal_bridge()):
         self.Q = dict()
         self.z = dict()
         self.delta = 0
@@ -16,7 +19,7 @@ class Sarsa_Lambda(Agent):
         self.lmbda = lmbda
         self.s_last = None
         self.a_last = None
-        self.bridge = lambda x: minimal_bridge(self, x)
+        self.bridge = bridge
 
     def acc_z(self, z, s, a):
         if (s, a) not in z.keys():
@@ -24,7 +27,7 @@ class Sarsa_Lambda(Agent):
         z[(s,a)] += 1
     
     def action(self, obs, actions, description=None):
-        s, R = self.bridge(obs)
+        s, R = self.applyBridge(obs)
 
         #s = (s['dungeonSize'], str(s['monsterDrawn']), s['currItemCode'])
 
@@ -82,6 +85,16 @@ class Sarsa_Lambda(Agent):
         self.s_last, self.a_last = None, None
         self.z = dict()
         self.delta = 0
+
+class Sarsa_Lambda_NGram(Sarsa_Lambda):
+    def __init__(self, learning = True, alpha=0.1, eps=0.1, lmbda = 0.5, bridge=minimal_bridge(), size=3):
+        Sarsa_Lambda.__init__(self, learning, alpha, eps, lmbda, bridge)
+        AddShortTermMemoryUnit(self, size, hashable=True)
+
+    def terminateEpisode(self, win=False):
+        super().terminateEpisode(win)
+        self.stmu.setBlank()
+
 
 if __name__ == "__main__":
     a = Sarsa_Lambda()

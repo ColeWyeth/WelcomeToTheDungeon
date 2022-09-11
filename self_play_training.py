@@ -6,9 +6,11 @@ import os
 from datetime import datetime
 
 from sarsa import Sarsa
-from sarsa_lambda import Sarsa_Lambda
+from sarsa_lambda import Sarsa_Lambda, Sarsa_Lambda_NGram
 from double_DQN import DoubleDQN
 from tqdm import tqdm
+
+from short_term_memory import AddShortTermMemoryUnit
 
 def training_arc(
     agent, 
@@ -82,6 +84,6 @@ def test_against_random(agent, episodes, playerNum = lambda e: 2):
     print("%d wins out of %d" % (wins, episodes))
 
 if __name__ == "__main__":
-    a = DoubleDQN()
-    training_arc(a, 10000, self_play=False)
+    a = Sarsa_Lambda_NGram()
+    training_arc(a, 50000, self_play=True)
     test_against_random(a, 100)
