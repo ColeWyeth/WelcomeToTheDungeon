@@ -14,5 +14,5 @@ Send an action to /action to take that action. Depending on the situation the op
 This should be the action field of the body of your request (in insomnia I use a Multipart request).
 
 You can play against the sarsa and sarsa lambda agents on my website at https://colewyeth.com/welcome_to_the_dungeon.html.
-The UI is slightly fragile so may require some reloads. Use a large random game ID and at most two opponents to the game.
+The UI is slightly fragile so may require some reloads. Use a large random game ID and add at most two opponents to the game.
 The Double DQN agent is also functional but is not served online due to memory requirements.
